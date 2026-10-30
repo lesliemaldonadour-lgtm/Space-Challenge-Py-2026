@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArasySat · Telemetría</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Space+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--blue:#0047ab;--red:#b02a00;--green:#0fa95f;
+--mono:"Space Mono",ui-monospace,Menlo,Consolas,monospace;--sans:"Space Grotesk",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0}
+body{min-height:100vh;display:flex;flex-direction:column;padding:10px 40px 28px;background:#fff;color:#fff;font-family:var(--mono)}
+header{display:flex;align-items:center;gap:20px;min-height:104px;flex-wrap:wrap}
+h1{font:700 46px var(--sans);color:#111}
+.logo{position:relative;width:96px;height:96px}
+.logo>*{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover}
+.bar{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#111;font-size:14px}
+button{font:700 14px var(--mono);padding:8px 14px;border:2px solid #111;background:#fff;color:#111;cursor:pointer}
+button:hover,button.on{background:#111;color:#fff}
+button:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+main{flex:1;display:grid;grid-template-columns:262fr 246fr 246fr 336fr;grid-template-rows:minmax(0,1fr);gap:14px;min-height:600px}
+.col{display:flex;flex-direction:column;gap:14px;min-height:0}
+section{padding:10px 12px}
+.blue{background:var(--blue)}.red{background:var(--red)}.green{background:var(--green)}
+.grow{flex:1}
+h2{font:700 21px/1.2 var(--sans);text-align:center;margin-bottom:6px}
+h3{font:400 15px var(--mono);margin:8px 0 4px 8px}
+.row{display:flex;gap:12px;align-items:flex-start;margin-left:8px}
+.w{width:132px;height:132px;background:#000;flex:none;display:block}
+.v{font:400 15px/1.5 var(--mono);white-space:pre;margin-top:2px}
+.alt{border:3px solid #000;background:linear-gradient(#3050ff,#fff 52%,#26ff3a);color:#000;height:172px}
+.alt h2{color:#000}
+#alt{font:700 46px var(--mono);text-align:center;margin:20px 0 6px}
+#vv{text-align:center;font-size:14px}
+.gps p{font-size:15px;line-height:1.6;margin-left:6px}
+.sc{position:relative;height:22px;margin:6px 8px 8px 6px}
+.t{background:linear-gradient(90deg,#0a1fb5,#00c8ff,#fff700,#ff8a00,#d40000)}
+.h{background:linear-gradient(90deg,#fff,#2a2aff)}
+.p{background:linear-gradient(90deg,#fff,#e82020)}
+.mk{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);font:400 34px/1 var(--sans);color:#fff;-webkit-text-stroke:1.5px #000;paint-order:stroke fill}
+.amb .v{margin-left:6px}
+.map{flex:1;min-height:320px;background:#cfd8cf}
+.pin{filter:drop-shadow(0 2px 2px #0006)}
+@media (max-width:1000px){body{padding:10px 16px 24px}main{grid-template-columns:1fr 1fr;grid-template-rows:none}.col:last-child{grid-column:1/-1}}
+@media (max-width:620px){main{grid-template-columns:1fr}h1{font-size:36px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>ArasySat</h1>
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#0b2a5b" stroke="#c8102e" stroke-width="4"/><text x="50" y="40" text-anchor="middle" fill="#fff" font-size="11" font-family="Space Grotesk,sans-serif" font-weight="700">ARASY-SAT</text><circle cx="50" cy="66" r="18" fill="#2f8f4e"/></svg>
+    <img src="logo.png" alt="" onerror="this.remove()">
+  </div>
+  <div class="bar"><span id="chip" aria-live="polite"></span><button id="bc">Conectar receptor</button><button id="bd">Demo</button></div>
+</header>
+
+<main>
+  <div class="col">
+    <section class="blue grow">
+      <h2>Movimiento</h2>
+      <h3>Aceleración</h3>
+      <div class="row"><svg class="w" id="acc" viewBox="0 0 132 132"></svg><div class="v" id="acv"></div></div>
+      <h3>Giroscopio</h3>
+      <div class="row">
+        <svg class="w" viewBox="0 0 132 132">
+          <defs><clipPath id="cg"><circle cx="66" cy="66" r="50"/></clipPath>
+          <linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3fd0"/><stop offset="1" stop-color="#8a6be0"/></linearGradient>
+          <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9a1f"/><stop offset="1" stop-color="#c9600a"/></linearGradient></defs>
+          <g clip-path="url(#cg)"><g id="gh"><rect x="-100" y="-100" width="332" height="166" fill="url(#sk)"/><rect x="-100" y="66" width="332" height="166" fill="url(#gd)"/><ellipse cx="66" cy="66" rx="50" ry="16" fill="none" stroke="#ffffff66"/><line x1="-100" x2="232" y1="66" y2="66" stroke="#fff" stroke-width="2"/></g></g>
+          <circle cx="66" cy="66" r="52" fill="none" stroke="#c9c9c9" stroke-width="5"/>
+          <path d="M54 66h24M66 60v12" stroke="#ffd34d" stroke-width="2.5"/>
+        </svg>
+        <div class="v" id="gyv"></div>
+      </div>
+      <h3>Roll</h3>
+      <div class="row">
+        <svg class="w" viewBox="0 0 132 132">
+          <defs><clipPath id="cr"><circle cx="66" cy="66" r="46"/></clipPath></defs>
+          <circle cx="66" cy="66" r="62" fill="#4b5560"/>
+          <g clip-path="url(#cr)"><g id="rh"><rect x="-100" y="-100" width="332" height="166" fill="#4a86d8"/><rect x="-100" y="66" width="332" height="166" fill="#8b5a33"/><line x1="-100" x2="232" y1="66" y2="66" stroke="#fff" stroke-width="2"/></g></g>
+          <g id="tk"></g>
+          <g id="rp"><path d="M66 20l-5 9h10z" fill="#ff8a00"/></g>
+          <path d="M30 70h26l10 8 10-8h26" fill="none" stroke="#fff" stroke-width="3"/>
+        </svg>
+        <div class="v" id="rov"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="red grow">
+      <h2>Brújula</h2>
+      <h3>Magnetómetro</h3>
+      <div class="row"><svg class="w" id="mag" viewBox="0 0 132 132"></svg><div class="v" id="mgv"></div></div>
+      <h3>Rumbo</h3>
+      <div class="row">
+        <svg class="w" viewBox="0 0 132 132">
+          <circle cx="66" cy="66" r="48" fill="none" stroke="#fff" stroke-width="3"/>
+          <g font-family="Space Mono,monospace" font-weight="700" font-size="14" fill="#fff" text-anchor="middle" stroke="#000" stroke-width="7" paint-order="stroke"><text x="66" y="23">N</text><text x="66" y="119">S</text><text x="113" y="71">E</text><text x="19" y="71">W</text></g>
+          <polygon id="ar" points="66,30 84,90 66,78 48,90" fill="#fff"/>
+        </svg>
+        <div class="v" id="hv"></div>
+      </div>
+    </section>
+    <section class="alt">
+      <h2>Altura</h2>
+      <div id="alt">000.0 m</div>
+      <div id="vv"></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="green gps">
+      <h2>GPS</h2>
+      <p>N° de Satélites: <span id="sat">--</span><br>Posición:<br>&nbsp;&nbsp;-Latitud:&nbsp; <span id="lat">--</span><br>&nbsp;&nbsp;-Longitud: <span id="lon">--</span><br>Velocidad: <span id="gv">--</span></p>
+    </section>
+    <section class="green grow amb">
+      <h2>Ambiente</h2>
+      <h3>Temperatura</h3><div class="sc t"><b class="mk" id="tm">⇕</b></div><div class="v" id="tv"></div>
+      <h3>Humedad</h3><div class="sc h"><b class="mk" id="hm">⇕</b></div><div class="v" id="hu"></div>
+      <h3>Presión</h3><div class="sc p"><b class="mk" id="pm">⇕</b></div><div class="v" id="pv"></div>
+    </section>
+  </div>
+
+  <div class="col"><div class="map" id="map"></div></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const f=(v,d=1)=>Number.isFinite(v)?v.toFixed(d):'--';
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+
+/* ---- Ejes 3D (aceleración y magnetómetro) ---- */
+const AX={x:[.87,.5],y:[0,-1],z:[-.87,.5]};
+function axes(svg,id){
+  const O=[66,74],ln=(a,l)=>`<line x1="66" y1="74" x2="${O[0]+a[0]*l}" y2="${O[1]+a[1]*l}"/>`;
+  svg.innerHTML=`<defs><marker id="h${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff2a2a"/></marker></defs>
+  <g stroke="#fff" stroke-width="3" stroke-linecap="round">${ln(AX.x,48)}${ln(AX.y,48)}${ln(AX.z,48)}</g>
+  <g stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1 6">${ln([-AX.x[0],-AX.x[1]],34)}${ln([0,1],34)}${ln([-AX.z[0],-AX.z[1]],34)}</g>
+  <g fill="#fff" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="15"><text x="74" y="22">Y</text><text x="110" y="112">X</text><text x="8" y="112">Z</text></g>
+  <line id="v${id}" x1="66" y1="74" x2="66" y2="74" stroke="#ff2a2a" stroke-width="2.5" marker-end="url(#h${id})"/>`;
+}
+function vec(id,x,y,z,k){
+  if(![x,y,z].every(Number.isFinite))return;
+  let dx=(x*AX.x[0]+y*AX.y[0]+z*AX.z[0])*k,dy=(x*AX.x[1]+y*AX.y[1]+z*AX.z[1])*k;
+  const l=Math.hypot(dx,dy);if(l>56){dx*=56/l;dy*=56/l}
+  const e=$('v'+id);e.setAttribute('x2',66+dx);e.setAttribute('y2',74+dy);
+}
+axes($('acc'),'a');axes($('mag'),'m');
+
+/* ---- Escala de balanceo ---- */
+$('tk').innerHTML=[-60,-45,-30,-20,-10,0,10,20,30,45,60].map(a=>{
+  const r=a*Math.PI/180,s=Math.sin(r),c=Math.cos(r),l=a%30===0?9:5;
+  return `<line x1="${66+51*s}" y1="${66-51*c}" x2="${66+(51+l)*s}" y2="${66-(51+l)*c}" stroke="#fff" stroke-width="2"/>`}).join('');
+
+/* ---- Mapa ---- */
+let map,marker,track,fix=false;
+if(window.L){
+  map=L.map('map').setView([-23.4,-58.4],6);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}).addTo(map);
+  marker=L.marker([0,0],{icon:L.divIcon({className:'pin',iconSize:[44,60],iconAnchor:[22,58],
+    html:'<svg viewBox="0 0 44 60" width="44" height="60"><path d="M22 58C22 58 3 34 3 21a19 19 0 0 1 38 0c0 13-19 37-19 37z" fill="#e3262b" stroke="#a01418" stroke-width="2"/><circle cx="22" cy="21" r="9" fill="#fff"/></svg>'})});
+  track=L.polyline([],{color:'#ff3b30',weight:3}).addTo(map);
+}
+const mark=(id,v,a,b)=>{const e=$(id);e.style.display=Number.isFinite(v)?'':'none';e.style.left=clamp((v-a)/(b-a)*100,0,100)+'%'};
+
+/* ---- Actualización con un paquete de 24 campos ---- */
+let n=null,last=0,rssi=null,state='Sin conexión · conecta el receptor por USB (Chrome o Edge)';
+function chip(){
+  $('chip').textContent=last?`Paquete #${n} · ${rssi!==null?rssi+' dBm · ':''}hace ${Math.round((Date.now()-last)/1000)} s`:state;
+}
+function update(d){
+  const [N,ax,ay,az,gx,gy,gz,mx,my,mz,hum,tmp,pre,alb,lat,lon,alg,sat,vel,roll,pitch,alt,vv,hdg]=d;
+  n=Number.isFinite(N)?N:'?';last=Date.now();chip();
+  $('acv').textContent=`x:${f(ax,2)}g\ny:${f(ay,2)}g\nz:${f(az,2)}g`;
+  vec('a',ax,ay,az,36);
+  $('gyv').textContent=`x:${f(gx)}deg/s\ny:${f(gy)}deg/s\nz:${f(gz)}deg/s`;
+  $('gh').setAttribute('transform',`translate(0 ${(Number.isFinite(pitch)?pitch:0)*1.6}) rotate(${-(roll||0)} 66 66)`);
+  $('rh').setAttribute('transform',`rotate(${-(roll||0)} 66 66)`);
+  $('rp').setAttribute('transform',`rotate(${-(roll||0)} 66 66)`);
+  $('rov').textContent=`${f(roll)}°\nPitch ${f(pitch)}°`;
+  $('mgv').textContent=`x:${f(mx)}uT\ny:${f(my)}uT\nz:${f(mz)}uT`;
+  vec('m',mx,my,mz,.8);
+  $('ar').setAttribute('transform',`rotate(${hdg||0} 66 66)`);
+  $('hv').textContent=f(hdg)+'°';
+  $('alt').textContent=f(Number.isFinite(alt)?alt:alb)+' m';
+  $('vv').textContent='Vel. vertical '+f(vv)+' m/s';
+  $('sat').textContent=f(sat,0);$('lat').textContent=f(lat,5);$('lon').textContent=f(lon,5);
+  $('gv').textContent=f(vel)+' km/h';
+  $('tv').textContent=f(tmp,2)+'°C';mark('tm',tmp,-10,50);
+  $('hu').textContent=f(hum,1)+'%';mark('hm',hum,0,100);
+  $('pv').textContent=f(pre,1)+' hPa';mark('pm',pre,800,1100);
+  if(map&&Number.isFinite(lat)&&Number.isFinite(lon)&&(lat||lon)){
+    const ll=[lat,lon];
+    if(!fix){marker.addTo(map);map.setView(ll,16);fix=true}
+    marker.setLatLng(ll);track.addLatLng(ll);
+    if(!map.getBounds().contains(ll))map.panTo(ll);
+  }
+}
+
+/* ---- Puerto serie (el receptor imprime "Recibido: ..." a 115200) ---- */
+function line(s){
+  const m=s.match(/RSSI:\s*(-?\d+)/);
+  if(m){rssi=+m[1];chip();return}
+  if(s.startsWith('Recibido:'))s=s.slice(9);
+  const p=s.split(',');
+  if(p.length===24)update(p.map(v=>parseFloat(v)));
+}
+let port,reader,closed;
+async function connect(){
+  if(!('serial' in navigator)){state='Este navegador no soporta USB serie · usa Chrome o Edge';chip();return}
+  try{port=await navigator.serial.requestPort();await port.open({baudRate:115200})}catch(e){port=null;return}
+  if(demo)toggleDemo();
+  $('bc').textContent='Desconectar';state='Conectado · esperando paquetes…';chip();
+  const dec=new TextDecoderStream();
+  closed=port.readable.pipeTo(dec.writable).catch(()=>{});
+  reader=dec.readable.getReader();
+  let buf='';
+  try{for(;;){const {value,done}=await reader.read();if(done)break;buf+=value;let i;
+    while((i=buf.indexOf('\n'))>=0){line(buf.slice(0,i).trim());buf=buf.slice(i+1)}}}catch(e){}
+  try{await closed;await port.close()}catch(e){}
+  port=null;last=0;rssi=null;$('bc').textContent='Conectar receptor';
+  state='Sin conexión · conecta el receptor por USB (Chrome o Edge)';chip();
+}
+$('bc').onclick=()=>port?reader.cancel().catch(()=>{}):connect();
+
+/* ---- Modo demo ---- */
+let demo=null,t=0;
+function toggleDemo(){
+  if(demo){clearInterval(demo);demo=null;$('bd').classList.remove('on');last=0;chip();return}
+  $('bd').classList.add('on');rssi=-70;
+  demo=setInterval(()=>{t++;const s=t/8;
+    update([t,.3*Math.sin(s),.2*Math.cos(s),1+.05*Math.sin(2*s),30*Math.sin(s),20*Math.cos(s),10*Math.sin(s/2),
+      20*Math.cos(s/2),-10+8*Math.sin(s),35*Math.sin(s/3),55+10*Math.sin(s/4),24+3*Math.sin(s/5),1004+4*Math.sin(s/6),118,
+      -25.2637+.002*Math.sin(s/3),-57.5759+.002*Math.cos(s/3),120,8,12,25*Math.sin(s),12*Math.cos(s*.7),
+      120+30*Math.sin(s/5),2*Math.cos(s/5),(t*5)%360]);
+  },1000);
+}
+$('bd').onclick=toggleDemo;
+chip();setInterval(chip,1000);
+</script>
+</body>
+</html>
